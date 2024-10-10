@@ -4,6 +4,13 @@
 > are the only things I tested and can confirm, that they work.
 
 
+# **Added Features**
+- Progressbar for uploading files -->
+  [Progressbar documentation](#custom-progressbar)
+
+
+
+
 This library is no longer maintained, you should instead use the official CLI client MEGAcmd:
 
 Download it: https://mega.io/cmd#downloadapps
@@ -182,3 +189,24 @@ m.rename(file, 'my_file.doc')
 For paid priority support contact [mega@odwyer.software](mailto:mega@odwyer.software).
 
 **[UK Python Development Agency](https://odwyer.software/)**
+
+
+## Custom progressbar
+
+Since this fork the upload function has a `callback` argument.
+By default, an internal progressbar is used, which is text based.
+
+If you want to extend / use your own progressbar, you can create a function
+which has `pos` and `total` as arguments. The `pos` argument is the current progress
+and the `total` is (as it says) the total size.
+
+**Example**
+
+```python
+
+def custom_progressbar(pos, total):
+    percentage = (pos / total) * 100
+    print(f"Downloaded: {pos} bytes / {total} bytes ({percentage:.2f}%)")
+```
+
+You can of course extend that with even `tqdm` or the `rich` library as you want :)
