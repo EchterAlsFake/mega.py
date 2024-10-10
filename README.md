@@ -1,3 +1,9 @@
+> [!NOTE]
+> This fork fixes Python 3.11 support.
+> I only need the API for uploading files and logging in, so these
+> are the only things I tested and can confirm, that they work.
+
+
 This library is no longer maintained, you should instead use the official CLI client MEGAcmd:
 
 Download it: https://mega.io/cmd#downloadapps
