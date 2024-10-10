@@ -27,6 +27,18 @@ from .crypto import (a32_to_base64, encrypt_key, base64_url_encode,
 logger = logging.getLogger(__name__)
 
 
+def text_progress_bar(downloaded, total, title=False):
+    bar_length = 50
+    filled_length = int(round(bar_length * downloaded / float(total)))
+    percents = round(100.0 * downloaded / float(total), 1)
+    bar = '#' * filled_length + '-' * (bar_length - filled_length)
+    if title is False:
+        print(f"\r[{bar}] {percents}%", end='')
+
+    else:
+        print(f"\r | {title} | -->: [{bar}] {percents}%", end='')
+
+
 class Mega:
     def __init__(self, options=None):
         self.schema = 'https'
@@ -745,7 +757,7 @@ class Mega:
             shutil.move(temp_output_file.name, output_path)
             return output_path
 
-    def upload(self, filename, dest=None, dest_filename=None):
+    def upload(self, filename, dest=None, dest_filename=None, callback=text_progress_bar):
         # determine storage node
         if dest is None:
             # if none set, upload to cloud drive node
@@ -769,9 +781,9 @@ class Mega:
             completion_file_handle = None
 
             mac_str = '\0' * 16
-            mac_encryptor = AES.new(k_str, AES.MODE_CBC,
-                                    mac_str.encode("utf8"))
+            mac_encryptor = AES.new(k_str, AES.MODE_CBC, mac_str.encode("utf8"))
             iv_str = a32_to_str([ul_key[4], ul_key[5], ul_key[4], ul_key[5]])
+
             if file_size > 0:
                 for chunk_start, chunk_size in get_chunks(file_size):
                     chunk = input_file.read(chunk_size)
@@ -795,17 +807,17 @@ class Mega:
 
                     # encrypt file and upload
                     chunk = aes.encrypt(chunk)
-                    output_file = requests.post(ul_url + "/" +
-                                                str(chunk_start),
-                                                data=chunk,
-                                                timeout=self.timeout)
+                    output_file = requests.post(ul_url + "/" + str(chunk_start),
+                                                data=chunk, timeout=self.timeout)
                     completion_file_handle = output_file.text
-                    logger.info('%s of %s uploaded', upload_progress,
-                                file_size)
+
+                    # Update progress via callback if provided
+                    if callback:
+                        callback(upload_progress, file_size)
+
+                    logger.info('%s of %s uploaded', upload_progress, file_size)
             else:
-                output_file = requests.post(ul_url + "/0",
-                                            data='',
-                                            timeout=self.timeout)
+                output_file = requests.post(ul_url + "/0", data='', timeout=self.timeout)
                 completion_file_handle = output_file.text
 
             logger.info('Chunks uploaded')
@@ -819,8 +831,7 @@ class Mega:
             dest_filename = dest_filename or os.path.basename(filename)
             attribs = {'n': dest_filename}
 
-            encrypt_attribs = base64_url_encode(
-                encrypt_attr(attribs, ul_key[:4]))
+            encrypt_attribs = base64_url_encode(encrypt_attr(attribs, ul_key[:4]))
             key = [
                 ul_key[0] ^ ul_key[4], ul_key[1] ^ ul_key[5],
                 ul_key[2] ^ meta_mac[0], ul_key[3] ^ meta_mac[1], ul_key[4],
@@ -830,12 +841,9 @@ class Mega:
             logger.info('Sending request to update attributes')
             # update attributes
             data = self._api_request({
-                'a':
-                'p',
-                't':
-                dest,
-                'i':
-                self.request_id,
+                'a': 'p',
+                't': dest,
+                'i': self.request_id,
                 'n': [{
                     'h': completion_file_handle,
                     't': 0,
